@@ -3,7 +3,7 @@ ROOTI = -I${shell root-config --incdir}
 ROOTL = ${shell root-config --glibs} -lSpectrum
 DEBUGFLAG = -g3
 GCC = g++ -fPIC
-all: reader MCA_data.so calibrate apply_calibration analyse compare time_dep testDB
+all: reader MCA_data.so calibrate apply_calibration analyse compare time_dep testDB activity activity_special
 
 %.o: %.cxx %.h
 	${GCC} ${DEBUGFLAG} $^ -c ${ROOTI} 
@@ -18,6 +18,12 @@ analyse: analyse.cxx MCA_dataDict.o MCA_data.o
 	${GCC} ${DEBUGFLAG} $^ -o $@ ${ROOTI} ${ROOTL}
 
 compare: compare.cxx MCA_dataDict.o MCA_data.o
+	${GCC} ${DEBUGFLAG} $^ -o $@ ${ROOTI} ${ROOTL}
+
+activity: activity.cxx MCA_dataDict.o MCA_data.o
+	${GCC} ${DEBUGFLAG} $^ -o $@ ${ROOTI} ${ROOTL}
+
+activity_special: activity_special.cxx MCA_dataDict.o MCA_data.o
 	${GCC} ${DEBUGFLAG} $^ -o $@ ${ROOTI} ${ROOTL}
 
 time_dep: time_dep.cxx MCA_dataDict.o MCA_data.o
