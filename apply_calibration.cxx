@@ -19,7 +19,7 @@ int main(int argc, char** argv){
   //  TApplication t("app",0,0);
   TFile yc(argv[1]);
   cout << " using "<<argv[1]<<" file for calibration." << endl;
-  yc.ls();
+  //  yc.ls();
   GeCalibrate *cal = (GeCalibrate*) yc.Get("GeCalibrate;1");
   //cout << " DEBUG "<< endl;
   if (cal != 0) cout << " got calibration" << endl;
