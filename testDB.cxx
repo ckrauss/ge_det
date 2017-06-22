@@ -1,4 +1,6 @@
-// Test for isotope data base
+// Test for isotope database. Output the intensity and energy of each line
+// for each isotope in the database. Assumes the database is in
+// 'isotopedb.txt'.
 //
 // Carsten Krauss April 2012
 //
@@ -27,14 +29,13 @@ int main(int argc, char **name){
   IsotopeDB base;
   base.InitFromFile("isotopedb.txt");
   cout << " Found " << base.GetNumberOfIsotopes() << " isotopes in database"  << endl;
-  //for (int i = 11 ; i < 12 ; i++){
-      for (int i = 0 ; i < base.GetNumberOfIsotopes() ; i++){
+  for (int i = 0 ; i < base.GetNumberOfIsotopes() ; i++){
     Isotope Is = base.GetIsotopeByNumber(i);
     cout << Is.GetName() << endl;
     double E, I;
     for (int y = 0; y < Is.GetNumberOfLines() ; y++){
       Is.GetEnergyAndIntensityByIntensity(y,E,I);
-      cout << " ---> " << I << " " << E << " keV" << endl;
+      cout << " ---> " << I << "   " << E << " keV" << endl;
     }
 
   }

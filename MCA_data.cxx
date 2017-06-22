@@ -1621,7 +1621,17 @@ void IsotopeDB::InitFromFile(TString fn){
 }
 
 Isotope &IsotopeDB::GetIsotopeByName(TString name){
-  cout << "Warning: not implemented!" << endl;
+
+  for(int i = 0; i < (int)vIdb.size(); i++){
+    if(vIdb.at(i).GetName()==name){
+      cout << "Found isotope " << name << " in the database!"  << endl;
+      return vIdb.at(i);
+    }
+  }
+
+  cout << "Could not find isotope " << name << " in the database... aborting" << endl;
+  exit(0);
+
 }
 
 Isotope &IsotopeDB::GetIsotopeByNumber(int n){
