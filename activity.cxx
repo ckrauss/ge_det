@@ -28,7 +28,7 @@ int main(int argc, char **argv){
   //    return -1;
   //  }
   if (argc<3) {
-    cerr << " give name of two _cal.root files as argument! first is the sample, the second should be the background file to be subtracted. " << endl;
+    cerr << " give name of two _cal.root files as argument! first is the sample, the second should be the background file to be subtracted. The name of the calibration file, if used, may be supplied as an optional third argument." << endl;
     return -1;
   }
  

@@ -131,7 +131,6 @@ class GeAnalyse {
   void BackgroundRemove(CalMCA_data *data, CalMCA_data* background);
   void TimeDependence(int ld_count,CalMCA_data** ld);
   void ActivityDetermination(CalMCA_data *d1, CalMCA_data* d2, IsotopeDB &db, GeCalibrate *cal);
-  void ActivityDeterminationSpecial(CalMCA_data *d1, CalMCA_data* d2, IsotopeDB &db, GeCalibrate *cal);
 };
 
 // Class for analysis of meterials, similar to source class, but used for different purpose

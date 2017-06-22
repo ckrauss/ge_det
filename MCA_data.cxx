@@ -1021,7 +1021,8 @@ void GeCalibrate::Calibrate(){
           break;
         }
       }
-      if (match = false) {
+      //if (match = false) {
+      if (!match) {
         cout << " No match for line " << source->GetEnergy(iline) << " keV (" << source->GetIntensity(iline) << "%) found"<< endl;
       }
     }
@@ -1207,151 +1208,6 @@ void GeAnalyse::Compare(CalMCA_data* d1,CalMCA_data* d2, GeCalibrate *cal = 0){
   }
 
 
-}
-
-void GeAnalyse::ActivityDeterminationSpecial(CalMCA_data* d1,CalMCA_data* d2, IsotopeDB &db, GeCalibrate *cal = 0){
-  //  d1->Analyse();
-  //  d2->Analyse();
-  TH1D* data1 = d1->GetCalData();
-  TH1D* data2 = d2->GetCalData();
-  TF1 *fspecial = new TF1 ("fspecial","pol9",0.08,2.24);
-  fspecial->SetParameters(0.416296, 4.20982, -16.6617, 38.9294, -57.0786,
-                          53.7715, -32.4423, 12.0994, -2.53735, 0.228614);
-  double weight_special = 1089.4; // grams
-  // Result of the MC study: efficiency correction from point like source to extended Bowtech light source
-  //  Minimizer is Linear
-  // Chi2                      =      5.46331
-  // NDf                       =            6
-  // p0                        =     0.416296   +/-   0.0841886
-  // p1                        =      4.20982   +/-   1.67269
-  // p2                        =     -16.6617   +/-   11.4558
-  // p3                        =      38.9294   +/-   38.2382
-  // p4                        =     -57.0786   +/-   71.6256
-  // p5                        =      53.7715   +/-   80.354
-  // p6                        =     -32.4423   +/-   55.0881
-  // p7                        =      12.0994   +/-   22.5864
-  // p8                        =     -2.53735   +/-   5.08222
-  // p9                        =     0.228614   +/-   0.482359
-
-  TH1D* diff = (TH1D*) data1->Clone("diff");
-  diff->Add(data2,-1);
-  TCanvas *c = new TCanvas("c","Activity",1000,750);
-  diff->Draw();
-  diff->GetXaxis()->SetRangeUser(60,6000);
-  diff->Fit("expo","","",50,4000);
-  char *plotname = new char[500];
-  sprintf(plotname,"plot_%s.pdf",d1->GetName());
-  TF1 *exp = diff->GetFunction("expo");
-  char *texname = new char[500];
-  sprintf(texname,"Report_%s_Special.tex",d1->GetName());
-  ofstream xx(texname);
-  xx << "\\documentclass{article}" << endl;
-  xx << "\\usepackage{graphicx}"<<endl;
-  TString stripped_name(d1->GetName());
-  stripped_name.ReplaceAll("_","\\_");
-  xx << "\\title{Report on Sample \""<<stripped_name<<"\"}"<<endl;
-  xx << "\\begin{document}" << endl;
-  xx << "\\maketitle"<<endl;
-  xx << " Automatically generated report of sample activity. Tested for isotopes in database only ( ";
-  for (int i = 0 ; i < db.GetNumberOfIsotopes(); i++){
-    Isotope Is = db.GetIsotopeByNumber(i);
-    xx << Is.GetLatexName()<<(i+1!=db.GetNumberOfIsotopes()?", ":" ");
-      }
-  xx <<").\\\\"<< endl;
-  xx << " Sample Information:" << endl;
-  xx << " \\begin{itemize}" << endl;
-  time_t stt = d1->GetStartTime();
-  char *datestring = ctime(&stt);
-  xx << " \\item Data taking started: "<<datestring;
-  stt = time_t(d1->GetStartTime()+d1->GetRealTime());
-  datestring = ctime(&stt);
-  xx << " \\item Data taking ended: "<<datestring;
-  xx << " \\item Live time: "<< d1->GetLiveTime()<< " s = "<< d1->GetLiveTime()/3600.<<" h = "<< d1->GetLiveTime()/(24*3600)<< " d"<< endl;
-  xx << " \\item Dead time: " << 100.*(d1->GetRealTime()-d1->GetLiveTime())/d1->GetRealTime() << " \\%" << endl;
-  xx << " \\end{itemize}" << endl;
-  xx << " " << endl;
-  xx << " \\begin{tabular}{|ccc|}" << endl;
-  xx << " \\hline"<<endl;
-  xx << " Isotope&Activity&Isotope Mass\\\\"<<endl;
-  xx << " \\hline"<<endl;
-
-  //  TSpectrum  *ts = new TSpectrum();
-  double N_A = 6.02214E23; // Avogadro's Number
-  for (int i = 0 ; i < db.GetNumberOfIsotopes(); i++){
-    Isotope Is = db.GetIsotopeByNumber(i);
-    double avg_activity = 0, avg_activity_err = 0;
-    int lines_cnt = 0;
-    for (int line = 0 ; line < Is.GetNumberOfLines() ; line++){
-      double Gamma_energy = 0;
-      double Gamma_intensity = 0;//%
-      Is.GetEnergyAndIntensityByIntensity(line,Gamma_energy, Gamma_intensity);
-      if (Gamma_energy<50.) continue;
-      double Gamma_peak_err;
-      double Gamma_peak = diff->IntegralAndError(diff->FindBin(Gamma_energy-2.0),diff->FindBin(Gamma_energy+2.0),Gamma_peak_err);
-      double EstBackground = exp->Integral(Gamma_energy-2.0, Gamma_energy+2.0);
-      double EstBackgroundErr = exp->IntegralError(Gamma_energy-2.0, Gamma_energy+2.0);
-      if (EstBackground*10. > Gamma_peak){
-        // Remove exponential background, this is a simplified background model, but to 1st order...
-        Gamma_peak -= EstBackground;
-        Gamma_peak_err = sqrt(Gamma_peak_err*Gamma_peak_err + EstBackgroundErr*EstBackgroundErr);
-      }
-      if (Gamma_peak>1.2*Gamma_peak_err)
-        cout << " "<<Is.GetName()<<" ("<<Gamma_energy<<") rate: " << Gamma_peak*1000 << "+/-" << Gamma_peak_err*1000 <<" mHz (background: " << EstBackground*1000 << "+/- " << EstBackgroundErr*1000 <<" mHz)"<<  endl;
-      else break;
-      if (cal !=0){
-        double Gamma_activity = 100/Gamma_intensity * Gamma_peak * 1./cal->GetEfficiency(Gamma_energy)/fspecial->Eval(Gamma_energy/1000.);
-        double Gamma_activity_uncert = 100/Gamma_intensity * Gamma_peak_err * 1./cal->GetEfficiency(Gamma_energy)/fspecial->Eval(Gamma_energy/1000.);
-        double Isotope_mass = Gamma_activity*Is.GetHalfLife()/log(2)/N_A*Is.GetAtomicMass()*1000.;
-        if (Gamma_activity>1.2*Gamma_activity_uncert){
-          cout << " "<<Is.GetName()<<" activity: " << Gamma_activity << "+/-" << Gamma_activity_uncert << " Bq "<< Isotope_mass <<"+/-" << Isotope_mass*(Gamma_activity_uncert/Gamma_activity)<< " mg"<< endl;
-          cout << " Efficiency: " << cal->GetEfficiency(Gamma_energy)/fspecial->Eval(Gamma_energy/1000.)<< endl;
-          double consistency = 1;
-          if (lines_cnt>0)
-            consistency = fabs(Gamma_activity-(avg_activity/avg_activity_err))/(Gamma_activity_uncert+sqrt(1./avg_activity_err));
-          else
-            consistency = 1.;
-          if (consistency<=1){
-            // is consistent with previous, more intense lines
-            lines_cnt++;
-            double weight = 1./(Gamma_activity_uncert*Gamma_activity_uncert);
-            avg_activity += Gamma_activity * weight;
-            avg_activity_err += weight; // sum of relative errors squared
-            // calculate weighted average.
-          }
-        }
-        else break;
-      }
-    }
-    if (lines_cnt>=1){
-      cout << "*******************************************************" << endl;
-      cout << "*** " << Is.GetName() << " " << avg_activity/avg_activity_err<< "+/-" << sqrt(1./avg_activity_err) << " Bq" << endl;
-      cout << " Mass of Isotope: " << avg_activity/avg_activity_err*Is.GetHalfLife()/log(2)/N_A*Is.GetAtomicMass()*1000. << "+/-" << (sqrt(1./avg_activity_err)/(avg_activity/avg_activity_err)) * avg_activity/avg_activity_err*Is.GetHalfLife()/log(2)/N_A*Is.GetAtomicMass()*1000. <<" mg"<< endl;
-      cout << "*******************************************************" << endl;
-      //      xx << "\\hline" << endl;
-      xx << " " << Is.GetLatexName() << "& " << avg_activity/avg_activity_err<< "$\\pm$" << sqrt(1./avg_activity_err) << " Bq &"<<avg_activity/avg_activity_err*Is.GetHalfLife()/log(2)/N_A*Is.GetAtomicMass()/weight_special << "$\\pm$" << (sqrt(1./avg_activity_err)/(avg_activity/avg_activity_err)) * avg_activity/avg_activity_err*Is.GetHalfLife()/log(2)/N_A*Is.GetAtomicMass()/weight_special <<" g/g "<<"\\\\" << endl;
-      xx << "\\hline" << endl;
-    }
-  }
-  xx << "\\end{tabular}"<<endl;
-  xx << "\\begin{figure}"<<endl;
-  xx << " \\includegraphics[scale=.45]{"<<plotname<<"}"<<endl;
-  xx << " \\caption{Spectrum of the data taken for the sample. Background was subtracted.}"<<endl;
-  xx << "\\end{figure}"<<endl;
-  xx << "\\end{document}"<<endl;
-  diff->GetXaxis()->SetTitle("Energy [keV]");
-  diff->GetYaxis()->SetTitle("Counts/second/bin");
-  diff->Rebin(16);
-  diff->GetXaxis()->SetRangeUser(60,6000);
-  diff->Draw();
-  c->Print(plotname);
-
-  xx.close();
-  char *texcommand = new char[400];
-  sprintf(texcommand,"/usr/texbin/pdflatex %s",texname);
-  system(texcommand);
-  char *opencommand = new char[400];
-  sprintf(opencommand,"open Report_%s_Special.pdf",d1->GetName());
-  system(opencommand);
 }
 
 void GeAnalyse::ActivityDetermination(CalMCA_data* d1,CalMCA_data* d2, IsotopeDB &db, GeCalibrate *cal = 0){
@@ -1765,7 +1621,17 @@ void IsotopeDB::InitFromFile(TString fn){
 }
 
 Isotope &IsotopeDB::GetIsotopeByName(TString name){
-  cout << "Warning: not implemented!" << endl;
+
+  for(int i = 0; i < (int)vIdb.size(); i++){
+    if(vIdb.at(i).GetName()==name){
+      cout << "Found isotope " << name << " in the database!"  << endl;
+      return vIdb.at(i);
+    }
+  }
+
+  cout << "Could not find isotope " << name << " in the database... aborting" << endl;
+  exit(0);
+
 }
 
 Isotope &IsotopeDB::GetIsotopeByNumber(int n){
